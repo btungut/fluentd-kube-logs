@@ -5,6 +5,9 @@
 {{- define "fluentd-kube-elastic.podAnnotations" -}}
 checksum/confd: {{ include (print $.Template.BasePath "/confd-cm.yaml") . | sha256sum }}
 checksum/es: {{ include (print $.Template.BasePath "/elasticsearch-secret.yaml") . | sha256sum }}
+{{- if .Values.conf.loki.enabled }}
+checksum/loki: {{ include (print $.Template.BasePath "/loki-secret.yaml") . | sha256sum }}
+{{- end }}
 checksum/files: {{ include (print $.Template.BasePath "/files-cm.yaml") . | sha256sum }}
 checksum/fluentd: {{ include (print $.Template.BasePath "/fluentd-cm.yaml") . | sha256sum }}
 {{- end }}
@@ -41,6 +44,13 @@ containers:
       - secretRef: 
           name: {{ (.Values.conf.elasticsearch.auth.passwordSecret) | default (include "fluentd-kube-elastic.elasticsearch-secret" .) }}
           optional: false
+    {{- end }}
+    {{- if .Values.conf.loki.enabled }}
+    {{- if or .Values.conf.loki.username .Values.conf.loki.password }}
+      - secretRef: 
+          name: {{ (.Values.conf.loki.passwordSecret) | default (include "fluentd-kube-elastic.loki-secret" .) }}
+          optional: false
+    {{- end }}
     {{- end }}
     ports:
       - name: metrics

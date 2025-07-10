@@ -97,11 +97,56 @@ conf:
 
         chunk_limit_size 8m
         total_limit_size 128MB
-
         retry_forever false
         retry_type periodic
         retry_wait 5
         retry_max_times 60
+      </buffer>
+
+  loki:
+    # -- Enable Loki output. When enabled, logs will be sent to Loki instead of or alongside Elasticsearch
+    enabled: false
+    
+    # -- Loki endpoint URL (without /loki/api/v1/push path)
+    url: ""
+    
+    # -- Username for basic authentication (optional)
+    username: ""
+    
+    # -- Password for basic authentication (optional)
+    password: ""
+    
+    # -- If filled, credentials for Loki will be fetched from the given kubernetes secret.
+    # -- The secret must contain fields named LOKI_USERNAME and LOKI_PASSWORD.
+    # -- This secret must be created in the same namespace as the deployment
+    passwordSecret: ""
+    
+    # -- Tenant ID for multi-tenant Loki (optional)
+    tenantId: ""
+    
+    # -- Additional labels to add to all log entries
+    extraLabels: {}
+      # environment: "production"
+      # cluster: "main"
+    
+    # -- Additional Loki plugin options
+    additionalOptions: |
+      @log_level info
+      drop_single_key true
+      
+      <buffer>
+        flush_mode interval
+        flush_interval 10s
+        flush_thread_count 2
+        flush_at_shutdown true
+        
+        chunk_limit_size 1m
+        total_limit_size 32MB
+        
+        retry_forever false
+        retry_type periodic
+        retry_wait 5
+        retry_max_times 10
       </buffer>
 
 

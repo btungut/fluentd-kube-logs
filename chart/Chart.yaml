@@ -2,7 +2,7 @@ apiVersion: v2
 name: fluentd-kube-elastic
 description: Best fluentd implementation for collecting container logs from Kubernetes
 type: application
-version: 1.18.1
+version: 1.18.2
 appVersion: "1.18-1-rev1"
 keywords:
   - fluentd
@@ -14,11 +14,18 @@ sources:
   - "https://github.com/btungut/fluentd-kube-elastic"
 maintainers:
   - name: "Burak Tungut"
-    email: "burak.tungut@microsoft.com"
+    url: "https://www.buraktungut.com"
+    email: "buraktungut@gmail.com"
+  - name: "TungOps"
+    url: "https://www.tungops.com.tr"
+    email: "burak.tungut@tungops.com.tr"
 
 annotations:
+  artifacthub.io/category: "monitoring-logging"
   artifacthub.io/containsSecurityUpdates: "false"
   artifacthub.io/license: MIT
   artifacthub.io/links: |
     - name: GitHub
       url: https://github.com/btungut/fluentd-kube-elastic
+    - name: Founder
+      url: https://www.buraktungut.com

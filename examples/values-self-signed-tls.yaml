@@ -1,0 +1,49 @@
+# HTTPS with Self-Signed Certificate Example
+# Use this when connecting to Elasticsearch with a self-signed or internal CA certificate
+# WARNING: ssl_verify false disables certificate validation - use only in trusted environments
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+conf:
+  elasticsearch:
+    host: "elasticsearch.logging.svc.cluster.local"
+    port: 9200
+    scheme: "https"
+    indexPrefix: "k8s-logs"
+
+    auth:
+      enabled: true
+      user: "elastic"
+      # Option 1: Plain-text password (not recommended for production)
+      password: "your-password"
+      # Option 2: Use Kubernetes secret (recommended)
+      # passwordSecret: "elasticsearch-credentials"
+
+    additionalOptions: |
+      # Disable SSL certificate verification for self-signed certificates
+      # WARNING: Only use in trusted network environments
+      ssl_verify false
+
+      verify_es_version_at_startup false
+      default_elasticsearch_version 8
+
+      <buffer>
+        flush_mode interval
+        flush_interval 15s
+        flush_thread_count 2
+        flush_at_shutdown true
+
+        chunk_limit_size 8m
+        total_limit_size 128MB
+
+        retry_forever false
+        retry_type periodic
+        retry_wait 5
+        retry_max_times 60
+      </buffer>

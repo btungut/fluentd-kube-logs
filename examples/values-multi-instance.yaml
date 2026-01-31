@@ -1,0 +1,35 @@
+# Multi-instance deployment example
+# Deploy multiple fluentd instances for different use cases
+# Each instance collects logs from pods with specific labels
+
+# Instance 1: Deploy with --set nameOverride=fluentd-apps
+# Instance 2: Deploy with --set nameOverride=fluentd-infra
+
+# This example shows configuration for the "apps" instance
+# Pods should be labeled with: fluentd.io/instance: "apps"
+
+conf:
+  elasticsearch:
+    host: "elasticsearch.logging.svc.cluster.local"
+    indexPrefix: "apps"  # Different index per instance
+
+  # Only collect from pods labeled for this instance
+  allowedLabels:
+    "fluentd.io/instance": "apps"
+
+  # Exclude infrastructure namespaces
+  ignoredContainersAndNamespaces:
+    - "*kube-system*"
+    - "*monitoring*"
+    - "*logging*"
+
+# Use node affinity to distribute instances
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: fluentd-kube-elastic
+          topologyKey: kubernetes.io/hostname

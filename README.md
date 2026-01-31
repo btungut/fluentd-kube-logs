@@ -185,12 +185,41 @@ conf:
       tlsSecret: "elasticsearch-tls"               # Must contain ca.crt, tls.crt, tls.key
 ```
 
+### Self-Signed Certificate Setup
+
+For development or internal environments with self-signed certificates:
+
+```yaml
+conf:
+  elasticsearch:
+    host: "elasticsearch.internal.local"
+    scheme: "https"
+    auth:
+      enabled: true
+      user: "elastic"
+      password: "your-password"
+    additionalOptions: |
+      # Disable SSL verification for self-signed certificates
+      # WARNING: Only use in trusted network environments
+      ssl_verify false
+      verify_es_version_at_startup false
+      default_elasticsearch_version 8
+
+      <buffer>
+        flush_mode interval
+        flush_interval 15s
+      </buffer>
+```
+
+> **Warning**: Disabling SSL verification (`ssl_verify false`) should only be used in trusted network environments where you cannot configure proper TLS certificates.
+
 See [`examples/`](./examples/) directory for complete configuration files:
 
 - [`values-minimal.yaml`](./examples/values-minimal.yaml) - Bare minimum configuration
 - [`values-production.yaml`](./examples/values-production.yaml) - Production-ready setup
 - [`values-filtered.yaml`](./examples/values-filtered.yaml) - Namespace and label filtering
 - [`values-multi-instance.yaml`](./examples/values-multi-instance.yaml) - Multi-instance deployment
+- [`values-self-signed-tls.yaml`](./examples/values-self-signed-tls.yaml) - HTTPS with self-signed certificate
 
 ## How It Works
 

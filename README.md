@@ -1,156 +1,297 @@
+# Fluentd Kube Elastic
+
 [![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/btungut)](https://artifacthub.io/packages/helm/btungut/fluentd-kube-elastic)
 [![Release](https://img.shields.io/github/v/release/btungut/fluentd-kube-elastic?include_prereleases&style=plastic)](https://github.com/btungut/fluentd-kube-elastic/releases)
 [![LICENSE](https://img.shields.io/github/license/btungut/fluentd-kube-elastic?style=plastic)](https://github.com/btungut/fluentd-kube-elastic/blob/master/LICENSE)
 
-# Fluentd Kube Elastic
+A production-ready Fluentd implementation for collecting, parsing, and shipping Kubernetes container logs to Elasticsearch. Automatically handles both **plain-text** and **JSON** formatted logs with intelligent parsing.
 
-Regardless of whether your container logs are plain-text or **json**! This fluentd implementation collects, parses, and sends all types of log entries to **Elasticsearch**.
+## Features
 
+- **Automatic Log Format Detection** - Seamlessly handles both plain-text and JSON logs
+- **Multiline Log Support** - Properly aggregates stack traces and multiline log entries
+- **Namespace Filtering** - Collect logs only from specific namespaces using regex patterns
+- **Label-based Filtering** - Filter logs based on Kubernetes pod labels
+- **Noise Reduction** - Exclude health checks, probes, and unwanted log patterns
+- **Prometheus Metrics** - Built-in observability with metrics by namespace and container image
+- **TLS Support** - Secure communication with Elasticsearch
+- **Flexible Authentication** - Supports basic auth with Kubernetes secrets
 
 ## Prerequisites
-- Helm
-- Elasticsearch >8.x
 
-## Installing the Chart
+- Kubernetes 1.19+
+- Helm 3.0+
+- Elasticsearch 8.x
 
+## Quick Start
 
-1. First you need to add repository _(if you haven't done yet before)_
 ```bash
+# Add the Helm repository
 helm repo add btungut https://btungut.github.io
+
+# Install with minimal configuration
+helm upgrade -i fluentd btungut/fluentd-kube-elastic \
+  --set conf.elasticsearch.host=elasticsearch.logging.svc.cluster.local \
+  --namespace logging --create-namespace
 ```
 
-2. Helm install / upgrade command
+## Installation
+
+### Basic Installation
 
 ```bash
-helm upgrade -i {RELEASE-NAME} btungut/fluentd-kube-elastic \
-  --set conf.elasticsearch.host={YOUR-HOST} \
+helm upgrade -i fluentd btungut/fluentd-kube-elastic \
+  --set conf.elasticsearch.host=<ELASTICSEARCH_HOST> \
+  --namespace logging
+```
+
+### Installation with Authentication
+
+```bash
+helm upgrade -i fluentd btungut/fluentd-kube-elastic \
+  --set conf.elasticsearch.host=<ELASTICSEARCH_HOST> \
   --set conf.elasticsearch.auth.enabled=true \
-  --set conf.elasticsearch.auth.username={YOUR-USER} \
-  --set conf.elasticsearch.auth.password={YOUR-PASSWORD} \
-  --namespace {YOUR-NS}
+  --set conf.elasticsearch.auth.user=elastic \
+  --set conf.elasticsearch.auth.password=<PASSWORD> \
+  --namespace logging
 ```
 
+### Installation with Values File
 
-## Uninstalling the Chart
-
-Run the following snippet to uninstall the release:
 ```bash
-helm delete {RELEASE-NAME}
+helm upgrade -i fluentd btungut/fluentd-kube-elastic \
+  -f values-production.yaml \
+  --namespace logging
 ```
 
----
+See [examples/](./examples/) directory for complete configuration examples.
 
-## Parameters
+## Uninstalling
 
-### Elasticsearch authentication parameters
+```bash
+helm uninstall fluentd --namespace logging
+```
 
-TBD!
+## Configuration
 
-Regarding other options and their default values, please refer to [`values.yaml`](./chart/values.yaml)
+### Core Parameters
 
----
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `kind` | Workload type: `Deployment` or `DaemonSet` | `DaemonSet` |
+| `image.repository` | Docker image repository | `btungut/fluentd-kube-elastic` |
+| `image.tag` | Docker image tag | `1.18-1-rev1` |
+| `image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `resources.limits.cpu` | CPU limit | `500m` |
+| `resources.limits.memory` | Memory limit | `512Mi` |
+| `resources.requests.cpu` | CPU request | `100m` |
+| `resources.requests.memory` | Memory request | `128Mi` |
 
-## Other Features
+### Fluentd Configuration
 
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `conf.enabled` | Enable default configuration | `true` |
+| `conf.debug` | Output to stdout instead of Elasticsearch | `false` |
+| `conf.logLevel` | Fluentd log level | `warn` |
+| `conf.multilinePattern` | Regex for multiline log detection | See values.yaml |
 
-### Exclude logs by container name and namespace
-It is possible to exclude specific containers by pod name and namespace. Please refer to `conf.ignoredContainersAndNamespaces` in `values.yaml`.
-TBD: yaml example
+### Log Filtering
 
-### Exclude logs by words contained in log entry
-It is possible to exclude specific logs entries by words. Please refer to `conf.ignoredWords` in `values.yaml`.
-TBD: yaml example
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `conf.allowedNamespaces` | Namespaces to collect logs from (regex) | `[]` (all) |
+| `conf.allowedLabels` | Pod labels to filter by (regex, OR logic) | `{}` (all) |
+| `conf.ignoredContainersAndNamespaces` | Containers/namespaces to exclude | `[]` |
+| `conf.ignoredWords` | Log patterns to exclude | `[]` |
+| `conf.removedFields` | Fields to remove from log records | `[]` |
 
+### Elasticsearch Configuration
 
----
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `conf.elasticsearch.host` | Elasticsearch host (required) | `""` |
+| `conf.elasticsearch.port` | Elasticsearch port | `9200` |
+| `conf.elasticsearch.scheme` | Connection scheme (`http`/`https`) | `http` |
+| `conf.elasticsearch.indexPrefix` | Index name prefix | `apps` |
+| `conf.elasticsearch.auth.enabled` | Enable authentication | `false` |
+| `conf.elasticsearch.auth.user` | Username | `elastic` |
+| `conf.elasticsearch.auth.password` | Password (plain-text) | `""` |
+| `conf.elasticsearch.auth.passwordSecret` | K8s secret with password | `""` |
+| `conf.elasticsearch.auth.tlsSecret` | K8s secret with TLS certs | `""` |
 
-## See how it works
+### Prometheus Metrics
 
-### Log entry from stdout
+| Parameter | Description | Default |
+| --------- | ----------- | ------- |
+| `conf.prometheus.enabled` | Enable Prometheus metrics | `false` |
+| `conf.prometheus.totalRecordsByImage` | Metric by container image | `true` |
+| `conf.prometheus.totalRecordsByNamespace` | Metric by namespace | `true` |
+
+## Examples
+
+### Namespace Filtering
+
+Collect logs only from specific namespaces:
+
+```yaml
+conf:
+  allowedNamespaces:
+    - "production"
+    - "staging"
+    - "apps-(.*)"  # Regex: matches apps-frontend, apps-backend, etc.
+```
+
+### Label-based Filtering
+
+Collect logs only from pods with specific labels (OR logic - any match passes):
+
+```yaml
+conf:
+  allowedLabels:
+    "fluentd.io/collect": "true"
+    "app.kubernetes.io/name": "my-app"
+```
+
+### Excluding Noisy Logs
+
+Filter out health checks and common noise:
+
+```yaml
+conf:
+  ignoredWords:
+    - "/health"
+    - "/healthz"
+    - "/readiness"
+    - "/liveness"
+    - "/metrics"
+
+  ignoredContainersAndNamespaces:
+    - "*fluentd*"
+    - "*kube-system*"
+```
+
+### Production Setup with TLS
+
+```yaml
+conf:
+  elasticsearch:
+    host: "elasticsearch.logging.svc.cluster.local"
+    scheme: "https"
+    auth:
+      enabled: true
+      user: "elastic"
+      passwordSecret: "elasticsearch-credentials"  # Must contain ELASTICSEARCH_PASSWORD key
+      tlsSecret: "elasticsearch-tls"               # Must contain ca.crt, tls.crt, tls.key
+```
+
+See [`examples/`](./examples/) directory for complete configuration files:
+
+- [`values-minimal.yaml`](./examples/values-minimal.yaml) - Bare minimum configuration
+- [`values-production.yaml`](./examples/values-production.yaml) - Production-ready setup
+- [`values-filtered.yaml`](./examples/values-filtered.yaml) - Namespace and label filtering
+- [`values-multi-instance.yaml`](./examples/values-multi-instance.yaml) - Multi-instance deployment
+
+## How It Works
+
+### Log Processing Pipeline
+
+1. **Collection** - Tails container log files from `/var/log/containers/`
+2. **Format Detection** - Identifies JSON vs plain-text logs
+3. **Parsing** - Parses JSON logs, aggregates multiline plain-text logs
+4. **Enrichment** - Adds Kubernetes metadata (namespace, pod, labels)
+5. **Filtering** - Applies namespace, label, and pattern filters
+6. **Output** - Ships to Elasticsearch with configurable buffering
+
+### Sample Log Entry
+
+**Input (stdout):**
 
 ```json
-{"@timestamp":"2024-12-27T01:42:33.7266952Z","@level":"debug","@src":"VendorAPI.Controllers.PricesController","@trx":"41a1500797f3d11cdaaf664714fd7da4","@msg":"First price found: {@price}","@obj":{"price":{"Id":"4046287c-2c47-4da0-9c88-a5355e0c925a","ProductId":1,"VendorId":"e6e7bc9f-7c47-4007-89fa-a401d4d428d1","PriceAmount":1070.9,"Stock":100,"Vendor":{"Id":"e6e7bc9f-7c47-4007-89fa-a401d4d428d1","Name":"NovaMobiles","City":"Antalya"}}},"@props":{"ActionId":"61c64bd1-23a3-462d-94f5-ba419a3f11ab","ActionName":"VendorAPI.Controllers.PricesController.GetFirstPrice (VendorAPI)","RequestId":"0HN962I53UGT3:0000000B","RequestPath":"/prices/first","ConnectionId":"0HN962I53UGT3","dotnet_spanid":"1deebd806dd1f9b8","dotnet_traceid":"2cc514b78c3575b7c58275314781a786"},"@http_request":{"method":"GET","url":"/prices/first","path":"/prices/first","x_headers":{"x-request-id":"41a1500797f3d11cdaaf664714fd7da4","x-real-ip":"10.7.1.1","x-forwarded-for":"10.7.1.1","x-forwarded-host":"dev.phonestore.local","x-forwarded-port":"80","x-forwarded-proto":"http","x-forwarded-scheme":"http","x-scheme":"http"},"user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"},"@app":{"name":"VendorAPI","env":"Development"}}
+{"@timestamp":"2024-12-27T01:42:33.726Z","@level":"debug","@msg":"Request processed","@app":{"name":"API"}}
 ```
 
-### Parsed log entry screenshot
-
-![Parsed log entry](./.images/kibana-01.png)
-
-
-### Parsed log entry from Kibana / Elasticsearch
+**Output (Elasticsearch):**
 
 ```json
 {
-  "_index": "apps-2024.12.27",
-  "_id": "-R7HBZQB3SZJBjKjyQoq",
-  "_version": 1,
-  "_score": 0,
-  "_ignored": [
-    "obj.@http_request.user_agent.keyword"
-  ],
   "_source": {
     "stream": "stdout",
     "obj": {
-      "@timestamp": "2024-12-27T01:42:33.7266952Z",
+      "@timestamp": "2024-12-27T01:42:33.726Z",
       "@level": "debug",
-      "@src": "VendorAPI.Controllers.PricesController",
-      "@trx": "41a1500797f3d11cdaaf664714fd7da4",
-      "@msg": "First price found: {@price}",
-      "@obj": {
-        "price": {
-          "Id": "4046287c-2c47-4da0-9c88-a5355e0c925a",
-          "ProductId": 1,
-          "VendorId": "e6e7bc9f-7c47-4007-89fa-a401d4d428d1",
-          "PriceAmount": 1070.9,
-          "Stock": 100,
-          "Vendor": {
-            "Id": "e6e7bc9f-7c47-4007-89fa-a401d4d428d1",
-            "Name": "NovaMobiles",
-            "City": "Antalya"
-          }
-        }
-      },
-      "@props": {
-        "ActionId": "61c64bd1-23a3-462d-94f5-ba419a3f11ab",
-        "ActionName": "VendorAPI.Controllers.PricesController.GetFirstPrice (VendorAPI)",
-        "RequestId": "0HN962I53UGT3:0000000B",
-        "RequestPath": "/prices/first",
-        "ConnectionId": "0HN962I53UGT3",
-        "dotnet_spanid": "1deebd806dd1f9b8",
-        "dotnet_traceid": "2cc514b78c3575b7c58275314781a786"
-      },
-      "@http_request": {
-        "method": "GET",
-        "url": "/prices/first",
-        "path": "/prices/first",
-        "x_headers": {
-          "x-request-id": "41a1500797f3d11cdaaf664714fd7da4",
-          "x-real-ip": "10.7.1.1",
-          "x-forwarded-for": "10.7.1.1",
-          "x-forwarded-host": "dev.phonestore.local",
-          "x-forwarded-port": "80",
-          "x-forwarded-proto": "http",
-          "x-forwarded-scheme": "http",
-          "x-scheme": "http"
-        },
-        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-      },
-      "@app": {
-        "name": "VendorAPI",
-        "env": "Development"
-      }
+      "@msg": "Request processed",
+      "@app": { "name": "API" }
     },
     "kubernetes": {
-      "namespace_name": "phonestore-dev",
-      "pod_name": "vendor-api-589d775b75-s7h8h",
-      "container_image": "btungut.azurecr.io/phonestore/vendor-api:v36-r1",
-      "host": "k3s-devtest-02",
+      "namespace_name": "production",
+      "pod_name": "api-589d775b75-s7h8h",
+      "container_image": "myregistry/api:v1.0.0",
       "labels": {
-        "app.kubernetes.io/instance": "vendor-api",
-        "app.kubernetes.io/name": "vendor-api"
+        "app.kubernetes.io/name": "api"
       }
     },
-    "@timestamp": "2024-12-27T01:42:33.734940401Z"
+    "@timestamp": "2024-12-27T01:42:33.734Z"
   }
 }
 ```
+
+### Kibana Screenshot
+
+![Parsed log entry in Kibana](./.images/kibana-01.png)
+
+## Troubleshooting
+
+### Logs Not Appearing in Elasticsearch
+
+1. Check Fluentd pod logs:
+
+   ```bash
+   kubectl logs -l app.kubernetes.io/name=fluentd-kube-elastic -n logging
+   ```
+
+2. Enable debug mode:
+
+   ```yaml
+   conf:
+     debug: true
+     logLevel: debug
+   ```
+
+3. Verify Elasticsearch connectivity:
+
+   ```bash
+   kubectl exec -it <fluentd-pod> -n logging -- curl -v http://<es-host>:9200
+   ```
+
+### High Memory Usage
+
+Adjust buffer settings in `conf.elasticsearch.additionalOptions`:
+
+```yaml
+additionalOptions: |
+  <buffer>
+    chunk_limit_size 4m
+    total_limit_size 64MB
+  </buffer>
+```
+
+### Logs Being Filtered Unexpectedly
+
+Check your filter configuration:
+
+- `allowedNamespaces` - Empty means all namespaces allowed
+- `allowedLabels` - Empty means all labels allowed
+- `ignoredContainersAndNamespaces` - Check for overly broad patterns
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Maintainers
+
+- **Burak Tungut** - [GitHub](https://github.com/btungut)

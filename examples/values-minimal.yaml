@@ -1,0 +1,6 @@
+# Minimal configuration example
+# This is the bare minimum required to get fluentd-kube-elastic running
+
+conf:
+  elasticsearch:
+    host: "elasticsearch.logging.svc.cluster.local"

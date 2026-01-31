@@ -1,0 +1,28 @@
+# Namespace and Label filtering example
+# Use this when you want to collect logs from specific namespaces or labeled pods only
+
+conf:
+  elasticsearch:
+    host: "elasticsearch.logging.svc.cluster.local"
+
+  # Only collect logs from these namespaces (regex supported)
+  # Logs from other namespaces will be dropped
+  allowedNamespaces:
+    - "production"
+    - "staging"
+    - "apps-(.*)"          # Matches apps-frontend, apps-backend, etc.
+    - "^(team-a|team-b)$"  # Exact match for team-a or team-b
+
+  # Only collect logs from pods with these labels (regex supported, OR logic)
+  # If a pod matches ANY of these labels, its logs will be collected
+  allowedLabels:
+    # Collect logs from pods managed by this fluentd instance
+    "fluentd.io/collect": "true"
+    # Collect logs from specific application
+    "app.kubernetes.io/name": "my-critical-app"
+
+  # Exclude system namespaces and infrastructure pods
+  ignoredContainersAndNamespaces:
+    - "*kube-system*"
+    - "*cattle-system*"
+    - "*fluentd*"

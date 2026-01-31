@@ -1,0 +1,77 @@
+# Production-ready configuration example
+# Includes authentication, TLS, resource tuning, and monitoring
+
+# Resource allocation for high-volume environments
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+  requests:
+    cpu: 200m
+    memory: 256Mi
+
+conf:
+  # Set to 'info' or 'warn' in production
+  logLevel: warn
+
+  # Exclude noisy health check logs
+  ignoredWords:
+    - "/health"
+    - "/healthz"
+    - "/readiness"
+    - "/liveness"
+    - "/metrics"
+    - "/probe"
+
+  # Enable Prometheus metrics for observability
+  prometheus:
+    enabled: true
+    totalRecordsByImage: true
+    totalRecordsByNamespace: true
+
+  elasticsearch:
+    host: "elasticsearch.logging.svc.cluster.local"
+    port: "9200"
+    scheme: "https"
+
+    # Use Kubernetes secret for credentials (recommended)
+    auth:
+      enabled: true
+      user: "elastic"
+      passwordSecret: "elasticsearch-credentials"
+      tlsSecret: "elasticsearch-tls"
+
+    indexPrefix: "k8s-logs"
+
+    # Production buffer settings
+    additionalOptions: |
+      @log_level warn
+      reload_on_failure true
+      verify_es_version_at_startup false
+      default_elasticsearch_version 8
+
+      <buffer>
+        flush_mode interval
+        flush_interval 10s
+        flush_thread_count 4
+        flush_at_shutdown true
+
+        chunk_limit_size 16m
+        total_limit_size 512MB
+
+        retry_forever false
+        retry_type exponential_backoff
+        retry_wait 5
+        retry_max_times 30
+        retry_max_interval 300
+      </buffer>
+
+# Ensure fluentd runs on all nodes
+tolerations:
+  - operator: Exists
+    effect: NoSchedule
+  - operator: Exists
+    effect: NoExecute
+
+# Graceful shutdown
+terminationGracePeriodSeconds: 60
